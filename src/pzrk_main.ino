@@ -96,6 +96,16 @@ String create_quanternion_json(float w, float x, float y, float z)
     return output;
 }
 
+String createJsonButton(int buttonPIN, bool status)
+{
+    DynamicJsonDocument doc(1024);
+    doc["buttonPIN"] = buttonPIN;
+    doc["status"] = status;
+
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
 // ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
@@ -270,14 +280,17 @@ void loop()
     if (button1.isPressed())
     {
         Serial.println("The button 1 is pressed");
-        packet.Create(buttonPin, std::string("{ \"Button23\": 1 }"));
+        createJsonButton
+        packet.Create(packet.PACKET_BUTTON, createJsonButton(buttonPin, true));
+        // packet.Create(buttonPin, std::string("{ \"Button23\": 1 }"));
         udp.print(packet.Serialize().c_str());
     }
 
     if (button1.isReleased())
     {
         Serial.println("The button 1 is released");
-        packet.Create(buttonPin, std::string("{ \"Button23\": 0 }"));
+        // packet.Create(buttonPin, std::string("{ \"Button23\": 0 }"));
+        packet.Create(packet.PACKET_BUTTON, createJsonButton(buttonPin, false));
         udp.print(packet.Serialize().c_str());
     }
     if (hall1.isPressed())
