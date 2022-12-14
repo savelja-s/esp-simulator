@@ -23,6 +23,7 @@ IPAddress addr(192, 168, 0, 29);
 const uint16_t port = 49152;
 AsyncUDP udp;
 #define DEBUG_MODE 1
+#define LISTEN_PORT 8888
 
 long lastDebounceTime = 0; // the last time the output pin was toggled
 long debounceDelay = 50;   // the debounce time; increase if the output flickers
@@ -69,6 +70,14 @@ void parsePacket(AsyncUDPPacket packet)
     // Выводи в последовательный порт все полученные данные
     Serial.write(packet.data(), packet.length());
     Serial.println();
+    DynamicJsonDocument doc(packet.length());
+    deserializeJson(doc, packet.data());
+    if (doc.containsKey("soundID") && doc.containsKey("status"))
+    {
+        String status = doc["status"];
+        String soundID = doc["soundID"];
+        Serial.println("Sound " + status + " with ID " + soundID + ".Need add logic");
+    }
 }
 
 // class default I2C address is 0x68
@@ -284,8 +293,8 @@ void setup()
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
 
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(ssid, password);
 
     // Ждём подключения WiFi
     while (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -301,7 +310,7 @@ void setup()
         Serial.println("UDP connected");
 
         // Call calback on recive
-        udp.onPacket(parsePacket);
+        // udp.onPacket(parsePacket);
     }
     else
     {
@@ -313,6 +322,15 @@ void setup()
         {
             delay(1000);
         }
+    }
+    if (udp.listen(LISTEN_PORT))
+    {
+        udp.onPacket(parsePacket);
+        // udp.onPacket([](AsyncUDPPacket packet)
+        //              {
+        //     Serial.print("Data: ");
+        //     Serial.write(packet.data(), packet.length());
+        //     Serial.println(); });
     }
 }
 
@@ -412,17 +430,4 @@ void loop()
     // udp.print(packet.Serialize().c_str());
     // delay(1000);
     /////
-}
-void setupServer() {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid, password);
-    delay(100);
-
-      if(udp.listen(port)) {
-        udp.onPacket([](AsyncUDPPacket packet) {
-            Serial.print("Data: ");
-            Serial.write(packet.data(), packet.length());
-            Serial.println();  
-          });
-      }
 }
