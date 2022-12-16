@@ -17,7 +17,7 @@ void Packet::Create(uint8_t type, std::string packet_body) {
 std::string Packet::Serialize() {
     std::ostringstream stringStream;
 
-    stringStream << type << std::setw(4) << packet_size << packet_body;
+    stringStream << (int)type << std::setw(4) << packet_size << packet_body;
     std::string result(stringStream.str());
 
     // Serial.println(result.c_str());

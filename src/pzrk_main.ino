@@ -17,9 +17,13 @@
 #include "Wire.h"
 #endif
 
+// const char *ssid = "TheNest_2.4";
+// const char *password = "ibhjrf2939";
+// IPAddress addr(192, 168, 31, 218);
 const char *ssid = "Zhu";
 const char *password = "13579135";
 IPAddress addr(192, 168, 0, 29);
+
 const uint16_t port = 49152;
 AsyncUDP udp;
 #define DEBUG_MODE 1
@@ -28,56 +32,61 @@ AsyncUDP udp;
 long lastDebounceTime = 0; // the last time the output pin was toggled
 long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
-// const int buttonPin = 23;
-// const int HALL_1_PIN = 35;
-// const int hall1pin = 18;
 // buttons
-#define BUTTON_1 23
-#define BUTTON_2 1
-#define BUTTON_3 2
-#define BUTTON_4 3
-#define BUTTON_5 4
-#define BUTTON_6 5
-#define BUTTON_7 6
-#define BUTTON_8 7
-#define BUTTON_9 8
-#define BUTTON_10 9
-// halls
-#define HALL_1_PIN 18
-#define HALL_2_PIN 1
-#define HALL_3_PIN 2
-#define HALL_4_PIN 3
+#define BUTTON_1_PIN 13
+#define BUTTON_2_PIN 12
+#define BUTTON_3_PIN 14
+#define BUTTON_4_PIN 27
+#define BUTTON_5_PIN 26
+#define BUTTON_6_PIN 25
+#define BUTTON_7_PIN 33
+#define BUTTON_8_PIN 32
+#define BUTTON_9_PIN 35
+#define BUTTON_10_PIN 34
+#define BUTTON_11_PIN 39
+#define BUTTON_12_PIN 36
 
-ezButton button1(BUTTON_1);
-ezButton button2(BUTTON_2);
-ezButton button3(BUTTON_3);
-ezButton button4(BUTTON_4);
-ezButton button5(BUTTON_5);
-ezButton button6(BUTTON_6);
-ezButton button7(BUTTON_7);
-ezButton button8(BUTTON_8);
-ezButton button9(BUTTON_9);
-ezButton button10(BUTTON_10);
-ezButton hall1(HALL_1_PIN);
-ezButton hall2(HALL_2_PIN);
-ezButton hall3(HALL_3_PIN);
-ezButton hall4(HALL_4_PIN);
+ezButton button1(BUTTON_1_PIN);
+ezButton button2(BUTTON_2_PIN);
+ezButton button3(BUTTON_3_PIN);
+ezButton button4(BUTTON_4_PIN);
+ezButton button5(BUTTON_5_PIN);
+ezButton button6(BUTTON_6_PIN);
+ezButton button7(BUTTON_7_PIN);
+ezButton button8(BUTTON_8_PIN);
+ezButton button9(BUTTON_9_PIN);
+ezButton button10(BUTTON_10_PIN);
+ezButton button11(BUTTON_11_PIN);
+ezButton button12(BUTTON_12_PIN);
 
-uint8_t btn_prev;
+// uint8_t btn_prev;
 
 void parsePacket(AsyncUDPPacket packet)
 {
     // Выводи в последовательный порт все полученные данные
     Serial.write(packet.data(), packet.length());
-    Serial.println();
-    DynamicJsonDocument doc(packet.length());
-    deserializeJson(doc, packet.data());
-    if (doc.containsKey("soundID") && doc.containsKey("status"))
-    {
-        String status = doc["status"];
-        String soundID = doc["soundID"];
-        Serial.println("Sound " + status + " with ID " + soundID + ".Need add logic");
-    }
+    Serial.println("----------------_____________----------");
+    std::stringstream ss;
+    ss << packet.data();
+    Serial.println("----------------_____________----------");
+    Serial.println(ss.str().c_str());
+    Serial.println("----------------_____________----------");
+    Packet packetM;
+    packetM.DeSerialize(ss.str());
+    Serial.println(packetM.Serialize().c_str());
+    // DynamicJsonDocument doc(packet.length());
+    // deserializeJson(doc, packet.data());
+    // String status = doc["status"];
+    // String soundID = doc["soundID"];
+    //  Serial.println(status);
+    // if (doc.containsKey("soundID") && doc.containsKey("status"))
+    // {
+    //     String status = doc["status"];
+    //     String soundID = doc["soundID"];
+    //     Serial.println("Sound " + status + " with ID " + soundID + ".Need add logic");
+    // }
+    packet.println("OK");
+    packet.flush();
 }
 
 // class default I2C address is 0x68
@@ -163,67 +172,43 @@ void sendByUDP(uint8_t type, std::string body)
 {
     Packet packet;
     packet.Create(type, body);
+    udp.connect(addr, port);
     udp.print(packet.Serialize().c_str());
+    udp.close();
 }
-void loopButton(int pin, ezButton button, uint8_t type)
+
+void loopButton(int pin, ezButton &button, uint8_t type)
 {
     button.loop(); // MUST call the loop() function first
     if (button.isPressed())
     {
-#ifdef DEBUG_MODE
-        Serial.println("The " + String(type) + " " + String(pin) + " is pressed");
-#endif
+        if (DEBUG_MODE)
+        {
+            Serial.println("The " + String(type) + " " + String(pin) + " is pressed");
+        }
         sendByUDP(type, createJsonButton(pin, 1));
     }
     if (button.isReleased())
     {
-#ifdef DEBUG_MODE
-        Serial.println("The " + String(type) + " " + String(pin) + " is released");
-#endif
+        if (DEBUG_MODE)
+        {
+            Serial.println("The " + String(type) + " " + String(pin) + " is released");
+        }
         sendByUDP(type, createJsonButton(pin, 0));
     }
 }
 
 void setupButton(int pin, ezButton button)
 {
-    button1.setDebounceTime(debounceDelay); // set debounce time to 50 milliseconds
+    button.setDebounceTime(debounceDelay); // set debounce time to 50 milliseconds
     pinMode(pin, INPUT_PULLUP);
 }
 
-void setup()
+void initMPU()
 {
-    setupButton(BUTTON_1, button1);
-    setupButton(BUTTON_2, button2);
-    setupButton(BUTTON_3, button3);
-    setupButton(BUTTON_4, button4);
-    setupButton(BUTTON_5, button5);
-    setupButton(BUTTON_6, button6);
-    setupButton(BUTTON_7, button7);
-    setupButton(BUTTON_8, button8);
-    setupButton(BUTTON_9, button9);
-    setupButton(BUTTON_10, button10);
-    setupButton(HALL_1_PIN, hall1);
-    setupButton(HALL_2_PIN, hall2);
-    setupButton(HALL_3_PIN, hall3);
-    setupButton(HALL_4_PIN, hall4);
-    // button1.setDebounceTime(debounceDelay); // set debounce time to 50 milliseconds
-    // hall1.setDebounceTime(debounceDelay);   // set debounce time to 50 milliseconds
-    //     pinMode(HALL_1_PIN, INPUT);
-    // pinMode(BUTTON_1, INPUT_PULLUP);
-    // pinMode(hall1pin, INPUT_PULLUP);
-    // btn_prev = digitalRead(BUTTON_1);
-
     // join I2C bus (I2Cdev library doesn't do this automatically)
     Wire.begin();
     Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-
-    // initialize serial communication
-    // (115200 chosen because it is required for Teapot Demo output, but it's
-    // really up to you depending on your project)
-    Serial.begin(115200);
-    while (!Serial)
-        ;
-
     // initialize device
     Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
@@ -232,16 +217,6 @@ void setup()
     // verify connection
     Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-    // // wait for ready
-    // Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    // while (Serial.available() && Serial.read())
-    //     ; // empty buffer
-    // while (!Serial.available())
-    //     ; // wait for data
-    // while (Serial.available() && Serial.read())
-    //     ; // empty buffer again
-
     // load and configure the DMP
     Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
@@ -289,12 +264,14 @@ void setup()
         Serial.print(devStatus);
         Serial.println(F(")"));
     }
-
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
+}
 
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid, password);
+void initWIFI()
+{
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
 
     // Ждём подключения WiFi
     while (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -302,43 +279,48 @@ void setup()
         Serial.print(".");
         delay(100);
     }
-
-    // Если удалось подключится по UDP
-    if (udp.connect(addr, port))
-    {
-
-        Serial.println("UDP connected");
-
-        // Call calback on recive
-        // udp.onPacket(parsePacket);
-    }
-    else
-    {
-
-        Serial.println("UDP not connected");
-
-        // Infinite cycle. TODO
-        while (1)
-        {
-            delay(1000);
-        }
-    }
+}
+void initUDP()
+{
     if (udp.listen(LISTEN_PORT))
     {
+        Serial.print("[UDP] Listen IP:");
+        Serial.print(WiFi.localIP().toString().c_str());
+        Serial.print(" PORT:");
+        Serial.println(LISTEN_PORT);
         udp.onPacket(parsePacket);
-        // udp.onPacket([](AsyncUDPPacket packet)
-        //              {
-        //     Serial.print("Data: ");
-        //     Serial.write(packet.data(), packet.length());
-        //     Serial.println(); });
     }
+}
+
+void setup()
+{
+    setupButton(BUTTON_1_PIN, button1);
+    setupButton(BUTTON_2_PIN, button2);
+    setupButton(BUTTON_3_PIN, button3);
+    setupButton(BUTTON_4_PIN, button4);
+    setupButton(BUTTON_5_PIN, button5);
+    setupButton(BUTTON_6_PIN, button6);
+    setupButton(BUTTON_7_PIN, button7);
+    setupButton(BUTTON_8_PIN, button8);
+    setupButton(BUTTON_9_PIN, button9);
+    setupButton(BUTTON_10_PIN, button10);
+    setupButton(BUTTON_11_PIN, button11);
+    setupButton(BUTTON_12_PIN, button12);
+
+    Serial.begin(115200);
+    while (!Serial)
+        ;
+    initMPU();
+
+    initWIFI();
+
+    initUDP();
 }
 
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
-
-void loop()
+void loopMPU()
 {
     // if programming failed, don't try to do anything
     if (!dmpReady)
@@ -375,59 +357,20 @@ void loop()
         // Вызываем функцию setup(), для повторного подключения
         setup();
     }
-    loopButton(BUTTON_1, button1, PACKET_BUTTON);
-    loopButton(BUTTON_2, button2, PACKET_BUTTON);
-    loopButton(BUTTON_3, button3, PACKET_BUTTON);
-    loopButton(BUTTON_4, button4, PACKET_BUTTON);
-    loopButton(BUTTON_5, button5, PACKET_BUTTON);
-    loopButton(BUTTON_6, button6, PACKET_BUTTON);
-    loopButton(BUTTON_7, button7, PACKET_BUTTON);
-    loopButton(BUTTON_8, button8, PACKET_BUTTON);
-    loopButton(BUTTON_9, button9, PACKET_BUTTON);
-    loopButton(BUTTON_10, button10, PACKET_BUTTON);
-    // button1.loop(); // MUST call the loop() function first
-    // hall1.loop(); // MUST call the loop() function first
-    loopButton(HALL_1_PIN, hall1, PACKET_HALL);
-    loopButton(HALL_2_PIN, hall2, PACKET_HALL);
-    loopButton(HALL_3_PIN, hall3, PACKET_HALL);
-    loopButton(HALL_4_PIN, hall4, PACKET_HALL);
-
-    // if (button1.isPressed())
-    // {
-    //     Serial.println("The button 1 is pressed");
-    //     packet.Create(packet.PACKET_BUTTON, createJsonButton(BUTTON_1, 1));
-    //     // packet.Create(buttonPin, std::string("{ \"Button23\": 1 }"));
-    //     udp.print(packet.Serialize().c_str());
-    // }
-
-    // if (button1.isReleased())
-    // {
-    //     Serial.println("The button 1 is released");
-    //     // packet.Create(buttonPin, std::string("{ \"Button23\": 0 }"));
-    //     packet.Create(packet.PACKET_BUTTON, createJsonButton(BUTTON_1, 0));
-    //     udp.print(packet.Serialize().c_str());
-    // }
-    // if (hall1.isPressed())
-    // {
-    //     Serial.println("The hall1 is pressed");
-    //     packet.Create(hall1pin, std::string("{ \"hall1\": 1 }"));
-    //     udp.print(packet.Serialize().c_str());
-    // }
-
-    // if (hall1.isReleased())
-    // {
-    //     Serial.println("The hall1 is released");
-    //     packet.Create(hall1pin, std::string("{ \"hall1\": 0 }"));
-    //     udp.print(packet.Serialize().c_str());
-    // }
-
-    // //ANALOG READ EXAMPLE
-    // uint16_t analogVal = analogRead(HALL_1_PIN);
-    // std::ostringstream ss;
-    // ss << "{ \"hall1_state\": " << analogVal << " }";
-    // std::string body = ss.str();
-    // packet.Create(HALL_1_PIN, body);
-    // udp.print(packet.Serialize().c_str());
-    // delay(1000);
-    /////
+}
+void loop()
+{
+    loopMPU();
+    loopButton(BUTTON_1_PIN, button1, PACKET_BUTTON);
+    loopButton(BUTTON_2_PIN, button2, PACKET_BUTTON);
+    loopButton(BUTTON_3_PIN, button3, PACKET_BUTTON);
+    loopButton(BUTTON_4_PIN, button4, PACKET_BUTTON);
+    loopButton(BUTTON_5_PIN, button5, PACKET_BUTTON);
+    loopButton(BUTTON_6_PIN, button6, PACKET_BUTTON);
+    loopButton(BUTTON_7_PIN, button7, PACKET_BUTTON);
+    loopButton(BUTTON_8_PIN, button8, PACKET_BUTTON);
+    loopButton(BUTTON_9_PIN, button9, PACKET_BUTTON);
+    loopButton(BUTTON_10_PIN, button10, PACKET_BUTTON);
+    loopButton(BUTTON_11_PIN, button11, PACKET_BUTTON);
+    loopButton(BUTTON_12_PIN, button12, PACKET_BUTTON);
 }
